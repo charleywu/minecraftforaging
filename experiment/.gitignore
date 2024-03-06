@@ -1,0 +1,74 @@
+# eclipse
+eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+eclipse/
+*.pydevproject
+.project
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+
+# ps1-dev tools
+*.ps1
+
+# tmp folder in gfm tool
+mc_gfm/tmp
+
+# Everything in run/ except for environments, forage_settings, objects_recover, sessions, web_api and the datalogs folder (without data)
+run/*
+!run/environments
+!run/forage_settings.txt
+!run/objects_recover.txt
+!run/sessions
+!run/web_api
+run/datalogs/*
+!run/datalogs
+!run/datalogs/.empty
+
+# Everything in build except /libs
+build/*
+!build/libs
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+.gradle
+.gradle/
+gradle-app.setting
+
+## IntelliJ IDEA
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# PDT-specific
+.buildpath

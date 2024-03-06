@@ -1,2 +1,8 @@
 analysis/data/all_players_pd_cache.feather filter=lfs diff=lfs merge=lfs -text
 analysis/data/2021batch/all_players_pd_cache.feather filter=lfs diff=lfs merge=lfs -text
+modeling/Stanfits/s_conditional_weights filter=lfs diff=lfs merge=lfs -text
+modeling/Stanfits/s_critical_weights filter=lfs diff=lfs merge=lfs -text
+modeling/Stanfits/s_solo_ARS_weights
+ filter=lfs diff=lfs merge=lfs -text
+modeling/Stanfits/s_ARS_weights filter=lfs diff=lfs merge=lfs -text
+modeling/Stanfits/s_conditional_ARS_weights filter=lfs diff=lfs merge=lfs -text

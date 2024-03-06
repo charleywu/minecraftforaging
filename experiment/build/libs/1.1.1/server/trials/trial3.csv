@@ -1,0 +1,17 @@
+id;separate;env_type;blocktype;environment;time_limit
+1;S;RO;melon;random.17;120
+2;S;SM;pumpkin;smooth.4;120
+3;S;RO;melon;random.16;120
+4;S;SM;pumpkin;smooth.15;120
+5;A;SM;pumpkin;smooth.5;120
+6;A;RO;melon;random.12;120
+7;A;RO;melon;random.5;120
+8;A;SM;pumpkin;smooth.11;120
+9;S;SM;pumpkin;smooth.13;120
+10;S;RO;melon;random.11;120
+11;S;SM;pumpkin;smooth.14;120
+12;S;RO;melon;random.1;120
+13;A;RO;melon;random.3;120
+14;A;SM;pumpkin;smooth.8;120
+15;A;RO;melon;random.7;120
+16;A;SM;pumpkin;smooth.6;120

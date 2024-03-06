@@ -1,0 +1,1 @@
+This file is irrelevant. Its only here to make sure git picks up the datalogs/ directory. Without the datalogs/ directory, the mod crashes, as it cant create a log file.

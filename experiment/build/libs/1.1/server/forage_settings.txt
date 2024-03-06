@@ -1,0 +1,108 @@
+## Settings File
+# Note to self: Keep spaces inbetween operators or the parser will fail.
+# Quotation marks are only required if there are spaces in the passed value
+
+# These settings dictate the general flow of the gamemode
+game = {
+	settings = {
+		player_amount = 1		# Expected player amount.
+		round_start_countdown = 5	# Countdown before starting a round
+		round_end_countdown = 10	# Countdown before ending a round
+		loop = false			# Continously loop through the rounds
+	}
+
+	# This section lists the type of each round. Round types are declared below
+	rounds = {
+		0 = tutorialRound
+		1 = defaultRound
+		2 = specialRound
+		3 = defaultRound
+	}
+
+	# This section describes the round types used above. New ones can be added or removed at will.
+	round_types = {
+		defaultRound = {
+			field_interval = 3	# Square size per melon. 3 means there is one melon per 3x3 space
+			field_type = melon	# If this field is not "melon", pumpkins will be used by default
+			is_tutorial = false	# Flag that marks a round as the tutorial.
+			time_limit = 30		# Round time. Does not include round_end_countdown (see above)
+			separate = false	# Let each player play on an individual melon-field
+			spawn = centre    	# Options: centre/corners/random (not yet implemented)
+			reset_score = false	# Reset score when round ends
+			environment = environments/patchy.1.csv
+		}
+		specialRound = {
+			field_interval = 3
+			field_type = pumpkin
+			environment = environments/patchy.1.csv
+			is_tutorial = false
+			time_limit = 30
+			separate = true
+			spawn = centre
+			reset_score = false
+		}
+		tutorialRound = {
+			is_tutorial = true	# The other fields are irrelevant here
+			reset_score = true
+		}
+	}
+}
+
+# These commands get executed on server start in the order of their keys
+server_start_commands = {
+	1 = "/gamerule doTileDrops false"
+	2 = "/gamerule doMobLoot false"
+	3 = "/gamerule doMobSpawning false"
+	4 = "/gamerule doWeatherCycle false"
+	5 = "/gamerule fallDamage false"
+	6 = "/gamerule doDaylightCycle false"
+	7 = "/gamerule doEntityDrops false"
+	8 = "/difficulty peaceful"
+	9 = "/kill @e[type=!player]"
+	10 = "/gamerule commandBlockOutput false"
+	11 = "/gamerule logAdminCommands false"
+	12 = "/gamerule sendCommandFeedback false"
+	13 = "/xp -999L @a"
+	14 = "/scoreboard players reset * Rewards"
+	15 = "/scoreboard objectives add Rewards level"
+	16 = "/scoreboard objectives setdisplay sideBar Rewards"
+	17 = "/time set 11800"
+}
+
+# These commands will be exectued when a round ends that has the reset_score flag set to true
+reset_score_commands = {
+	1 = "/xp -999L @a"
+	2 = "/scoreboard players reset * Rewards"
+}
+
+# General constants
+constants = {
+	melon_hardness = 1.0	#How long the player as to hit the melon for it to break
+	pumpkin_hardness = 1.5
+}
+
+# Names of the NBT files that describe used structures
+structures = {
+	lobby = {
+		origin = { x = 0 y = 4 z = 128 }	# Where to spawn the first lobby
+		center = { x = 5 y = 1 z = 3 }		# Relative position the player will be teleported to
+		offset = { x = 30 y = 0 z = 0 }		# Coordinate offset at which the next lobby will be placed
+		base_file = lobby_base
+	}
+	tutorial = {
+		origin = { x = 0 y = 4 z = 512 }
+		center = { x = 29 y = 3 z = 28 }
+		offset = { x = 64 y = 0 z = 0 }
+		base_file = tutorial_base
+		extensions = {
+			1 = tutorial_ext
+		}
+		extension_relative_positions = {
+			tutorial_ext = { x = -21 y = 2 z = -2 }
+		}
+	}
+	field = {					# Fields only require origin and offset
+		origin = { x = 0 y = 20 z = 0 }
+		offset = { x = 100 y = 0 z = 0 }
+	}
+}

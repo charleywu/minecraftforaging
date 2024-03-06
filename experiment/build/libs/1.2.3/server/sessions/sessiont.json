@@ -1,0 +1,3 @@
+{"metaData":[{"smoothBlockType":"melon","language":"En"}],"roundData":[
+{"game":1,"round":1,"environment":"random","blockType":"pumpkin","soloRound":"TRUE","envFile":"random.4.csv","time_limit":15,"trainingRound":"FALSE"},
+{"game":1,"round":2,"environment":"smooth","blockType":"melon","soloRound":"FALSE","envFile":"smooth.20.csv","time_limit":15,"trainingRound":"FALSE"}]}

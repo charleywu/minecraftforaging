@@ -1,0 +1,10 @@
+{
+    "forge_marker": 1,
+    "defaults": {
+        "model": "forage:magic_pumpkin",
+        "uvlock": true
+    },
+    "variants": {
+        "normal": { "model": "forage:magic_pumpkin" }
+    }
+}
