@@ -1,0 +1,152 @@
+<html>
+    <meta charset="utf-8"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        first = true;
+
+        function toggle_log() {
+            first = false;
+            var x = document.getElementById("log_container");
+            if (x.style.display === "block") {
+                x.style.display = "none";
+            } else {
+                x.style.display = "block";
+            }
+        }
+
+        // Function to regularly update mod status div
+        function update() {
+          $.ajax({ url: 'status', success: function(data) {
+            document.getElementById("status").innerHTML = data;
+          } });
+
+          if (first || document.getElementById("log_container").style.display === "none") return;
+          $.ajax({ url: 'log', success: function(data) {
+            document.getElementById("log").innerHTML = data;
+          } });
+        }
+
+        setInterval(update, 1000);
+        update();
+    </script>
+    <style>
+        #status {
+            background-color: #131429;
+            color: #EEEEEE;
+        	font-family: Consolas, Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
+        	font-size: 14px;
+            width: 600px;
+            height: 200px;
+            border: 1px solid red;
+            padding: 5px;
+            padding-left: 20px;
+            margin: 20px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+        }
+        #log_container {
+            display: none;
+            position:relative;
+            background-color: #131429;
+            color: #EEEEEE;
+        	font-family: Consolas, Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
+        	font-size: 11px;
+            width: 600px;
+            height: 370px;
+            border: 1px solid red;
+            padding: 5px;
+            padding-left: 20px;
+            margin: 20px;
+            margin-top: 0px;
+            padding-top:0px;
+        }
+        #log {
+            position:absolute;
+            bottom:0;
+        }
+        #logtoggle {
+            position: absolute;
+            left: 570px;
+        }
+        form {
+            background-color: #DDDDDD;
+            font-family: Arial;
+            font-size: 14px;
+            width: 600px;
+            padding: 5px;
+            padding-left: 20px;
+            margin: 20px;
+        }
+        h1 {
+            font-family: Arial;
+            padding: 5px;
+            padding-left: 20px;
+            margin: 20px;
+        }
+        h3 {
+            font-family: Arial;
+            padding: 5px;
+            margin: 20px;
+        }
+        h4 {
+            font-family: Arial;
+            padding: 5px;
+            padding-left: 0px;
+            margin: 0px;
+        }
+        #command {
+            width: 490px;
+        }
+        button {
+            background-color: #a9c3cf;
+            width: 85px;
+        }
+        input[type=submit] {
+            float: right;
+            background-color: #a9c3cf;
+            width: 100px;
+        }
+        select {
+            width: 100px;
+        }
+    </style>
+    <body>
+        <h1>Minecraft Experiment Admin Tool</h1>
+        <form action="setup" method="post" id="setupform">
+            <h4>Set up a session:</h4>
+            Session:
+            <select name="session" id="session">
+                <option value="session1">Session1</option>
+                <option value="session2">Session2</option>
+                <option value="session3">Session3</option>
+                <option value="session4">Session4</option>
+                <option value="session5">Session5</option>
+                <option value="session6">Session6</option>
+                <option value="session7">Session7</option>
+                <option value="session8">Session8</option>
+                <option value="session9">Session9</option>
+                <option value="session10">Session10</option>
+                <option value="session11">Session11</option>
+                <option value="session12">Session12</option>
+                <option value="session13">Session13</option>
+                <option value="session14">Session14</option>
+                <option value="session15">Session15</option>
+                <option value="session16">Session16</option>
+            </select>&emsp;&emsp;&emsp;&emsp;
+            Language:
+            <select name="lang" id="lang">
+                <option value="En">English</option>
+                <option value="Ge">German</option>
+            </select>
+            <input type="submit" value="Set up">
+        </form>
+        <form action="command" method="post" id="commandform">
+            <h4>Execute a command:</h4>
+            <input id="command" name="command" value="">
+            <input type="submit" value="Execute">
+        </form>
+        <h3>Server status:</h3><button type="button" id="logtoggle" onclick="toggle_log();">Toggle Log</button>
+        <div id="status"></div>
+        <div id="log_container"> <div id="log"></div> </div>
+    </body>
+</html>

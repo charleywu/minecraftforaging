@@ -1,0 +1,197 @@
+## Settings File
+# Note to self: Keep spaces in-between operators or the parser will fail.
+# Quotation marks are only required if there are spaces in the passed value
+# Using arguments: @1[default] will validate to the first argument passed. If none is passed 'default' is used instead. Only works with numbers.
+
+# These settings dictate the general flow of the gamemode
+game = {
+	name = @1[defaultname]	# Name of the game as a whole
+	dev = true
+	settings = {
+		player_amount = 2		# Expected player amount.
+		round_start_countdown = 5	# Countdown before starting a round
+		round_end_countdown = 10	# Countdown before ending a round
+		loop = false			# Continously loop through the rounds or end game after last round
+		tutorial = true
+		field_interval = 3
+
+		underblock = false
+		fireworks = false
+		splash = false
+		player_splash = true
+		plusone_indicator = false
+
+		const_foodlevel_1 = true
+
+		forceChunkLoad = true
+
+		CentsPerPoint = 3
+	}
+
+	$embededJSON = sessions/@1[sessiont].json
+}
+
+# General constants
+constants = {
+	melon_hardness = 1.5	#How long the player as to hit the melon for it to break
+	pumpkin_hardness = 1.5
+}
+
+# These commands get executed on server start in the order of their keys
+server_start_commands = {
+	0 = "/save-off"
+	1 = "/gamerule doTileDrops false"
+	2 = "/gamerule doMobLoot false"
+	3 = "/gamerule doMobSpawning false"
+	4 = "/gamerule doWeatherCycle false"
+	5 = "/gamerule fallDamage false"
+	6 = "/gamerule doDaylightCycle false"
+	7 = "/gamerule doEntityDrops false"
+	8 = "/difficulty easy"
+	9 = "/kill @e[type=!player]"
+	10 = "/gamerule commandBlockOutput false"
+	11 = "/gamerule logAdminCommands false"
+	12 = "/gamerule sendCommandFeedback false"
+	14 = "/xp -999L @a"
+	15 = "/time set 11800"
+}
+
+# These commands get executed whenever a player connects
+onconnect_commands = {
+}
+
+# These strings get appended to the '/summon fireworks_rocket x y z ' command which gets called when a reward is found
+firework_commands = {
+	1 = "{LifeTime:15,FireworksItem:{id:fireworks,Count:1,tag:{Fireworks:{Flight:1,Explosions:[{Type:0,Flicker:0,Trail:0,Colors:[I;2437522],FadeColors:[I;2437522]}]}}}}"
+}
+
+localization = {
+	Ge = {
+		countdown_text = "Sekunden"
+		melon = "Melone"
+		melonfield = "Melonen-Feld"
+		melons = "Melonen"
+		pumpkin = "Kürbis"
+		pumpkinfield = "Kürbis-Feld"
+		pumpkins = "Kürbissen"
+		you_will_now_play = "Du spielst jetzt eine "
+		training = "Trainingsrunde "
+		on_a = "auf einem "
+		separate = "Einzelrunde "
+		social = "Gruppenrunde "
+		tutorial_started = "Tutorial gestartet."
+		ready_players = "Bereite Spieler: "
+		proceed_to = "Begib dich auf die "
+		green_platform = "grüne Plattform."
+		you_found = "Du hast diese Runde "
+		rewards_that_round = " Gewinne gefunden!"
+		total = " (Insgesamt: "
+		experiment_finished = "Das Experiment ist zuende."
+		congratulations = "Glückwunsch! "
+		you_had_total_score = "Du hast insgesamt "
+		points = " Punkte gesammelt."
+	}
+	En = {
+		countdown_text = "seconds remaining"
+		melon = "melon"
+		melons = "melons"
+		melonfield = "melon-field"
+		pumpkin = "pumpkin"
+		pumpkins = "pumpkins"
+		pumpkinfield = "pumpkin-field"
+		you_will_now_play = "You will now play a "
+		training = "training round "
+		on_a = "on a "
+		separate = "solo round "
+		social = "group round "
+		tutorial_started = "Tutorial started."
+		ready_players = "Ready players: "
+		proceed_to = "Please proceed to "
+		green_platform = "the green platform."
+		you_found = "You found "
+		rewards_that_round = " rewards that round!"
+		total = " (Total: "
+		experiment_finished = "The experiment has finished."
+		congratulations = "Congratulations! "
+		you_had_total_score = "You had a total score of "
+		points = " points."
+	}
+}
+
+# Names of the NBT files that describe used structures such as lobby and tutorial
+structures = {
+
+	lobby = {
+		origin = { x = 0 y = 4 z = 128 }	# Where to spawn the first lobby
+		center = { x = 5 y = 1 z = 3 }		# Relative position the player will be teleported to
+		offset = { x = 30 y = 0 z = 0 }		# Coordinate offset at which the next lobby will be placed
+		base_file = lobby_base
+	}
+
+	social_lobby = {
+		origin = { x = 0 y = 3 z = 1024 }
+
+		center = { x = 15 y = 2 z = 3 }
+		has_multiple_centers = true
+		m_center_offset = { x = -10 y = 0 z = 0 }	# Offset between centers if the structure has many
+		m_center_amount = 4
+
+		offset = { x = 128 y = 0 z = 0 }
+		base_file = social_lobby_base
+		extensions = {
+			1 = social_lobby_ext
+		}
+		extension_relative_positions = {
+			social_lobby_ext = { x = -20 y = 0 z = 0 }
+		}
+	}
+
+	tutorial_melon = { #Tutorial for smooth melons
+		origin = { x = 0 y = 4 z = 512 }
+		center = { x = 29 y = 4 z = 14 }
+		offset = { x = 256 y = 0 z = 0 }
+		base_file = tutorial_0
+		extensions = {
+			1 = tutorial_1
+			2 = tutorial_2_melon_smooth
+			3 = tutorial_2_pumpkin_random
+			4 = tutorial_3
+			5 = tutorial_end
+		}
+
+		extension_relative_positions = {
+			tutorial_1 = { x = -10 y = 0 z = 0 }
+			tutorial_2_melon_smooth = { x = -23 y = 0 z = 0 }
+			tutorial_2_pumpkin_random = { x = -36 y = 0 z = 0 }
+			tutorial_3 = { x = -49 y = 0 z = 0 }
+			tutorial_end = { x = -68 y = 0 z = 0 }
+		}
+	}
+
+	tutorial_pumpkin = { #Tutorial for smooth pumpkins
+		origin = { x = 0 y = 4 z = 512 }
+		center = { x = 29 y = 4 z = 14 }
+		offset = { x = 256 y = 0 z = 0 }
+		base_file = tutorial_0_pumpkin
+		extensions = {
+			1 = tutorial_1_pumpkin
+			2 = tutorial_2_pumpkin_smooth
+			3 = tutorial_2_melon_random
+			4 = tutorial_3
+			5 = tutorial_end
+		}
+
+		extension_relative_positions = {
+			tutorial_1_pumpkin = { x = -10 y = 0 z = 0 }
+			tutorial_2_pumpkin_smooth = { x = -23 y = 0 z = 0 }
+			tutorial_2_melon_random = { x = -36 y = 0 z = 0 }
+			tutorial_3 = { x = -49 y = 0 z = 0 }
+			tutorial_end = { x = -68 y = 0 z = 0 }
+		}
+	}
+
+	field = {					# Fields only require origin and offset
+		origin = { x = 0 y = 4 z = -256 }
+		offset = { x = 500 y = 0 z = 0 }
+	}
+}

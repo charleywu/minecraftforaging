@@ -1,0 +1,16 @@
+[
+{
+  "modid": "forage",
+  "name": "Forage Mod",
+  "description": "Example placeholder mod.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["B. Kahl"],
+  "credits": "ExampleCredits",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
