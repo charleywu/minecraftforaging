@@ -66,22 +66,22 @@ The visual-field simulator is a standard Unity project using Unity version 2019.
 
 ### Usage
 
-List the blocks and player files you want to simulate in the `visibility/blocks_paths.txt` and `visibility/players_paths.txt` files respectively. Make sure to list them as paths relative to the root directory of the git repository (not the Unity project). Likewise, make sure the listed blocks and players files match each other correctly.
+To run the simulator, first list the `blocks` and `players` files of the rounds you want to simulate in the `visibility/blocks_paths.txt` and `visibility/players_paths.txt` files respectively. Make sure to list them using paths relative to the root directory of the git repository (not the Unity project). Likewise, make sure that the listed blocks and players files match each other line-by-line.
 
-Afterwards, open the Unity project, run the scene `VFSScene` and click on "Run". The application will now go through the list and generate a `evis` and `pvis` file for each round. These contain data for the visibility of events and players respectively.
+Afterwards, open the Unity project, run the scene `VFSScene` and click on "Run". The application will now go through the list of files and generate an `evis` and `pvis` file for each given round. These contain data for the visibility of events and players respectively.
 
-If you want to view the simulated visual fields as they are being generated, you can enable them in the Unity editor under `Canvas > Perspectives` (in the VFSScene). If you want the colors of the entities to be more distinct, you can increase the `CER_id_multiplier` on the `Root` script. If you want the simulation to run in real-time (as opposed to as fast as possible), you can toggle the `realTime` field of the `Director_Generate` script.
+If you want to view the simulated visual fields as they are being generated, you can enable them in the Unity editor under `Canvas > Perspectives` (inside the VFSScene). If you want the colors of the entities to be more distinguishable, you can increase the `CER_id_multiplier` on the `Root` script. If you want the simulation to run in real-time (as opposed to as fast as possible), you can toggle the `realTime` field of the `Director_Generate` script.
 
 ### Source Code
 
-The project is comprised of two distinct scenes. 
+The project is comprised of two scenes:
 
-The `Reference_test` scene merely has the purpose of ensuring that the Unity-simulated particle effect from reward-splashes matches the native minecraft one as closely as possible. You can press spacebar to start a video recording of a minecraft splash effect overlayed by a simulated one.
+- The `Reference_test` scene merely has the purpose of ensuring that the Unity-simulated particle effect from reward-splashes matches the native minecraft one as closely as possible. You can press spacebar to start a video recording of a minecraft splash effect overlayed by a simulated one.
 
-The `VFSScene` is the scene that actually simulates the visual fields for a round and generates the respective data. Each simulated object (player, splash, block etc.) is represented by a `ColorEncodedRenderer` (CER) script, which is assigned a unique ID number that it then derives its color from.
+- The `VFSScene` is the scene that actually simulates the visual fields for a round and generates the respective data. Each simulated object (player, splash, block etc.) is represented by a `ColorEncodedRenderer` (CER) script, which is assigned a unique ID number that it then derives its color from.
 
-The entire data-generation process is overseen by a `Director_Process` script, which creates a new `Director_Generate` instance for each round that is simulated. The latter goes through the corresponding players file and, for each timestep, places the players in their recorded positions, removes any blocks that were broken since the previous step and updates each splash effect.
-Each of the player-objects (P1-4) contain a snapshot-camera than renders that player's perspective into a distinct render texture. After the game-state has been updated, each player's perspective is rendered and the resulting texture is retrieved into CPU memory, where the number of occurences (ie. pixels) of each color (any by extension CER) is counted and logged.
+The entire data-generation process is overseen by a `Director_Process` script, which creates a new `Director_Generate` instance for each round that is simulated. The latter goes through the corresponding players file and, for each timestep, places the players in their recorded positions, removes any blocks that were broken since the previous timestep and updates each splash effect.
+Each of the player-objects (P1-4) contain a snapshot-camera than renders that player's perspective into a distinct render texture. After the game-state has been updated, each player's perspective is rendered and the resulting texture is retrieved into CPU memory, where the number of occurences (ie. pixels) of each color (and by extension CER) is counted and logged.
 
 ## Experiment
 
