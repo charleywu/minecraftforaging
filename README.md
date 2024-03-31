@@ -5,6 +5,10 @@ This repository contains all data and code for running the experiment, analyzing
 Wu, C. M., Deffner, D., Kahl, B., Meder, B., Ho, M. H., & Kurvers, R. H. J. M. (2023). Visual-spatial dynamics drive adaptive social learning in immersive environments. BioRxiv. https://doi.org/10.1101/2023.06.28.546887
 
 
+## Software requirements
+
+The analysis code was written in R 4.3.0 and Python 3.7.4. The experiment was implemented as a custom mod developed for Minecraft Java Edition ver. 1.12.2 using Forge ver. 14.23.5.2847. The visual-field transcription software is a standard Unity project using Unity version 2019.3.0f5 with no additional dependencies.Statistical models are fit using the Stan MCMC engine via the rstan (2.21.2) and cmdstanr (0.5.3) packages, which require a C++ compiler (installation instructions are available at https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started and https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
+
 ## Directory structure
 
 
