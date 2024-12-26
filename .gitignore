@@ -47,3 +47,30 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Unity-related
+/visibility/[Ll]ibrary/
+/visibility/[Tt]emp/
+/visibility/[Oo]bj/
+/visibility/[Bb]uild/
+/visibility/[Bb]uilds/
+/visibility/[Ll]ogs/
+/visibility/[Mm]emoryCaptures/
+!/visibility/[Aa]ssets/**/*.meta
+/visibility/.vs/
+/visibility/.vscode/
+ExportedObj/
+/visibility/*.csproj
+/visibility/*.unityproj
+/visibility/*.sln
+/visibility/*.suo
+/visibility/*.tmp
+/visibility/*.user
+/visibility/*.userprefs
+/visibility/*.pidb
+/visibility/*.booproj
+/visibility/*.svd
+/visibility/*.pdb
+/visibility/*.mdb
+/visibility/*.opendb
+/visibility/*.VC.db
