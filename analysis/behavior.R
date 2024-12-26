@@ -1,5 +1,5 @@
 #Behavioral patterns
-#Charley Wu, 2023
+#Charley Wu, 2024
 rm(list=ls()) #house keeping
 
 #load packages
@@ -59,14 +59,11 @@ table(demoDat$gender)
 table(demoDat['Minecraft experience']) # 1=No experience, 2=Minimal, 3=A bit , 4=A lot
 
 
-#TODO: Add this to playerDF
-
 #Earnings
 scoreVec <- blockDF %>% group_by(id) %>% dplyr::summarize(points = sum(reward)) %>% pull(points)
 euroVec <- 12 + scoreVec*.03
 mean(euroVec)
 sd(euroVec)
-
 
 
 ####################################################################################################
@@ -437,15 +434,15 @@ pRewardRateNormalized<- ggplot(rewardDF, aes(x = time, y = (reward*20)/expectedR
   geom_smooth(alpha = 0.2, size = .7)+
   #stat_summary(fun.y = mean, geom= 'line')+
   #stat_summary(fun.data = mean_cl_boot, geom= 'ribbon', color = NA, alpha = 0.2)+
-  scale_fill_manual(values= c("#E69F00","#009E73"), name = 'Environment')+
-  scale_color_manual(values= c("#E69F00","#009E73"), name = 'Environment')+
-  scale_linetype(name = 'Condition')+
+  scale_fill_manual(values= c("#E69F00","#009E73"), name = 'Env')+
+  scale_color_manual(values= c("#E69F00","#009E73"), name = 'Env')+
+  scale_linetype(name = 'Cond')+
   scale_x_continuous(breaks=seq(0,120,length.out=5))+
   #scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
   xlab('Time (s)')+ ylab('Normalized Reward Rate')+
   guides(linetype = guide_legend(override.aes= list(color = "black", fill = NA)))+
   #ggtitle('Normalized Reward Rate')+
-  theme(legend.position=c(0.1,0.5),legend.justification = c(0,0), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank(), legend.direction = "horizontal")
+  theme(legend.position=c(0.2,0.5),legend.justification = c(0,0), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank(), legend.direction = "horizontal")
 pRewardRateNormalized
 
 # pRewardNormalized <-rewardDF %>% group_by(id, env, type) %>% dplyr::summarize(reward = mean((reward*20)/expectedRewardRate)) %>% #*20 is to account for sampling rate
@@ -462,6 +459,248 @@ pRewardRateNormalized
 #   theme(legend.position=c(1,0.5), legend.justification = c(1,0.5), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
 # pRewardNormalized
 
+
+####################################################################################################
+#Reward dependent distance/turning angle
+####################################################################################################
+#Time since last reward analysis
+rewardTimeDF <- readRDS('../cogmodeling/data/rewardTimes.RDS') #computed in rewardTimes.R
+
+
+#Compute prev reward success
+adaptDF <- data.frame()
+
+for (i in unique(blockDF$id)){
+  for (r in unique(blockDF$round)){
+    #TESTING
+    #i <- sample(unique(blockDF$id), 1)
+    #r <- sample(unique(blockDF$round), 1)
+    subdf <- subset(rewardTimeDF, id == i & round == r) #subset data
+    subdf$prevReward <- lag(subdf$reward) #Compute prev reward
+    subdf$distance <- c(NA, unlist(sapply(1:nrow(subdf), function(d)sqrt((subdf$x[d] - subdf$x[d-1])^2 + (subdf$z[d] - subdf$z[d-1])^2 )))) #distance between blocks
+    #compute turning rate from spatial coordinates using method from Pacheco-Cobos et al., (PNAS 2019) 
+    theta <- atan(abs(diff(subdf$z)/diff(subdf$x)))
+    theta[is.nan(theta)] <- 0 #replace any NAs
+    delta_turning <- abs(diff(theta))/pi #use absolute turning angle as a measure of turning rate
+    subdf$delta_turning <- c(NA, NA, delta_turning) #append two NAs, since this is a difference of differences
+    #compute time diff
+    timediff <- subdf$time - lag(subdf$time, 1) 
+    subdf$turningRate <- subdf$delta_turning  / timediff
+    
+    #put it together
+    adaptDF <- rbind(adaptDF, subdf)
+  }
+}
+
+
+#Ind means
+adaptDist <- adaptDF %>% group_by(id, env, type, prevReward) %>% summarize(distance = mean(distance, na.rm=TRUE)) #ind means
+adaptAngle <- adaptDF %>% group_by(id, env, type, prevReward) %>% summarize(delta_turning = mean(delta_turning, na.rm=TRUE)) #ind means
+
+#Binary analysis based on prev reward
+
+pAdaptDist <- ggplot(adaptDist[!is.na(adaptDist$prevReward),], aes(x=prevReward, y = distance, color = env, fill = env, linetype = type, shape = type))+
+  stat_summary(fun.y=mean, geom='point', position = position_dodge(.5))+
+  #stat_summary(fun.y=mean, aes(group=env), geom='line')+
+  stat_summary(fun.data = mean_cl_normal, geom='errorbar', width = 0.1, position = position_dodge(.5))+
+  scale_fill_manual(values =c("#E69F00","#009E73"), name="Environment")+
+  scale_color_manual(values =c("#E69F00","#009E73"),  name="Environment")+
+  scale_shape_manual(values = c(1,15), name = 'Condition')+
+  scale_linetype(name='Condition')+
+  xlab('Previous Block')+
+  scale_x_discrete(labels = c("No Success", "Success"))+
+  theme_classic()+
+  guides(fill="none")+
+  ylab('Distance Between Blocks')+
+  scale_shape_manual(values = c(1,15), name = 'Condition')+
+  theme(legend.position="none")
+#coord_cartesian(ylim=c(0,32))+
+#geom_signif(comparisons = list(c('group', 'solo')), color = 'black', annotation = c("NS"))+ 
+#ggtitle('Rewards')+
+#theme(legend.position=c(0,1), legend.justification = c(0,1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+pAdaptDist
+
+
+#Regression
+adaptRegDist <- adaptDF %>% dplyr::filter(!is.na(prevReward)) %>% group_by(id, env, type, prevReward) %>% summarize(distance = mean(distance, na.rm=TRUE))
+adaptRegDist$type <- factor(adaptRegDist$type, levels = c('solo', 'group'))
+adaptRegDist$env <- factor(adaptRegDist$env, levels = c('random', 'smooth'))
+mAdaptDist <- run_model(brm(distance~env*type*prevReward + (1+env+type|id), data =adaptRegDist,
+                            cores=4,  iter = 4000, warmup = 1000), modelName = 'adaptDistance')
+
+summary(mAdaptDist)
+
+#coefficient plot
+pCoeff_adaptDist <- plot_model(mAdaptDist, 
+                               axis.labels =c('smooth:group:prevReward','group:prevReward', 'smooth:prevReward', 'smooth:group', 'prevReward', 'group', 'smooth'), 
+                               bpe = "mean", bpe.style = "dot", bpe.color='black', show.values = TRUE, vline.color='grey',  ci.lvl=.95, sort.est=FALSE, show.p=FALSE) +
+  theme_classic()+
+  xlab('')+
+  #ylab('Est ± 95% CI')+
+  ylim(c(-2, 1.5))+ 
+  ggtitle('Foraging Distance')
+
+pCoeff_adaptDist
+
+
+fixef(mAdaptDist)
+
+post <- mAdaptDist %>% posterior_samples() #posterior samples
+formatHDI(post$`b_envsmooth:prevRewardTRUE`, signDig=1) 
+formatHDI(post$b_prevRewardTRUE, signDig=1) #group effect in random
+
+
+
+formatHDI(post$b_typegroup + post$`b_envsmooth:prevRewardTRUE`, signDig=2) 
+
+#Turning Angle
+adaptMeans <- adaptDF %>% group_by(id, env, type, prevReward) %>% summarize(delta_turning = mean(delta_turning, na.rm=TRUE)) #ind means
+
+pAdaptAngle <- ggplot(adaptMeans[!is.na(adaptMeans$prevReward),], aes(x=prevReward, y = delta_turning, color = env, fill = env, linetype = type, shape=type))+
+  stat_summary(fun.y=mean, geom='point', position = position_dodge(.5))+
+  #stat_summary(fun.y=mean, aes(group=env), geom='line')+
+  stat_summary(fun.data = mean_cl_normal, geom='errorbar', width = 0.1, position = position_dodge(.5))+
+  scale_fill_manual(values =c("#E69F00","#009E73"), name="Environment")+
+  scale_color_manual(values =c("#E69F00","#009E73"),  name="Environment")+
+  #scale_shape(name='Environment')+
+  scale_linetype(name='Condition')+
+  xlab('Previous Block')+
+  scale_x_discrete(labels = c("No Success", "Success"))+
+  theme_classic()+
+  guides(fill="none")+
+  ylab('Turning Angle')+
+  scale_shape_manual(values = c(1,15), name = 'Condition')+
+  #coord_cartesian(ylim=c(0,32))+
+  #geom_signif(comparisons = list(c('group', 'solo')), color = 'black', annotation = c("NS"))+ 
+  #ggtitle('Rewards')+
+  theme(legend.position='right', strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+pAdaptAngle
+
+#Regression
+adaptReg <- adaptDF %>% dplyr::filter(!is.na(prevReward)) %>% group_by(id, env, type, prevReward) %>% summarize(delta_turning = mean(delta_turning, na.rm=TRUE))
+adaptReg$type <- factor(adaptReg$type, levels = c('solo', 'group'))
+adaptReg$env <- factor(adaptReg$env, levels = c('random', 'smooth'))
+mAdapt <- run_model(brm(delta_turning~env*type*prevReward + (1+env+type|id), data =adaptReg,
+                        cores=4,  iter = 4000, warmup = 1000), modelName = 'adaptTurning')
+
+summary(mAdapt)
+
+#coefficient plot
+pCoeff_adapt <- plot_model(mAdapt, 
+                           axis.labels =c('smooth:group:prevReward','group:prevReward', 'smooth:prevReward', 'smooth:group', 'prevReward', 'group', 'smooth'), 
+                           bpe = "mean", bpe.style = "dot", bpe.color='black', show.values = TRUE, vline.color='grey',  ci.lvl=.95, sort.est=FALSE, show.p=FALSE) +
+  theme_classic()+
+  xlab('')+
+  #ylab('Est ± 95% CI')+
+  ylim(c(-.04, .06))+ 
+  ggtitle('Turning Angle')
+
+pCoeff_adapt
+
+
+fixef(mAdapt)
+
+post <- mAdapt %>% posterior_samples() #posterior samples
+formatHDI(post$b_envsmooth, signDig=2) 
+formatHDI(post$`b_envsmooth:prevRewardTRUE`, signDig=2) 
+formatHDI(post$b_prevRewardTRUE, signDig=3) #group effect in random
+
+
+
+
+
+
+#Does adaptivity predict performance?
+
+ids <-  blockDF %>% group_by(id) %>% dplyr::summarize(points = sum(reward)) %>% pull(id)
+adaptPerfDF <- data.frame()
+for (envType in c('random', 'smooth')){
+  for (condType in c('solo', 'group')){
+    #difference between distance after failure vs. success
+    distDiff <- adaptDist %>% dplyr::filter(env==envType & type==condType & !is.na(prevReward)) %>% mutate(distdiff = distance[prevReward==FALSE] - distance[prevReward==TRUE]) %>%  group_by(id) %>% summarize(distdiff = mean(distdiff)) %>% pull(distdiff)
+    angleDiff <- adaptAngle %>% dplyr::filter(env==envType & type==condType & !is.na(prevReward)) %>% mutate(angleDiff = delta_turning[prevReward==FALSE] - delta_turning[prevReward==TRUE]) %>%  group_by(id) %>% summarize(angleDiff = mean(angleDiff)) %>% pull(angleDiff)
+    rewards <-  blockDF %>% dplyr::filter(env==envType & type==condType) %>% group_by(id) %>% dplyr::summarize(points = sum(reward)) %>% pull(points)
+    subdf <- data.frame(id = ids, reward = rewards, distanceDiff = distDiff, angleDiff =angleDiff, env = envType, cond = condType)
+    cat(envType)
+    cat(condType)
+    print(corTestPretty(rewards,distDiff, method='kendall'))
+    print(corTestPretty(rewards,angleDiff, method='kendall'))
+    adaptPerfDF <- rbind(adaptPerfDF, subdf)
+  }
+}
+
+#Adaptive Distance
+pAdaptPerf <-  ggplot(adaptPerfDF, aes(x = distanceDiff, y = reward/4, color = env, fill = env, shape = cond))+
+  geom_point(alpha = .7)+
+  geom_smooth(data = subset(adaptPerfDF, distanceDiff<9), method='lm', fullrange = T)+
+  facet_grid(cond~env, scales="free")+
+  scale_fill_manual(values =c("#E69F00","#009E73"), name="Environment")+
+  scale_color_manual(values =c("#E69F00","#009E73"),  name="Environment")+
+  #scale_shape(name='Environment')+
+  xlab('Adaptive Foraging distance\n Dist(Failure) - Dist(Success)')+
+  theme_classic()+
+  guides(fill="none")+
+  ylab('Avg. Rewards per Round')+
+  scale_shape_manual(values = c(1,15), name = 'Condition')+
+  theme(legend.position='none', strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+
+pAdaptPerf
+
+#ggsave('plots/adaptPerf.pdf', pAdaptPerf, width = 6, height = 4, units = 'in')
+
+#Adaptive Turning Angle
+pAnglePerf <-  ggplot(adaptPerfDF, aes(x = angleDiff, y = reward/4, color = env, fill = env, shape = cond))+
+  geom_point(alpha = .7)+
+  geom_smooth( method='lm', fullrange = T)+
+  facet_grid(cond~env, scales="free")+
+  scale_fill_manual(values =c("#E69F00","#009E73"), name="Environment")+
+  scale_color_manual(values =c("#E69F00","#009E73"),  name="Environment")+
+  #scale_shape(name='Environment')+
+  xlab('Adaptive Turning Angle\n Angle(Failure) - Angle(Success)')+
+  theme_classic()+
+  guides(fill="none")+
+  ylab('Avg. Rewards per Round')+
+  scale_shape_manual(values = c(1,15), name = 'Condition')+
+  theme(legend.position='none', strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+
+pAnglePerf
+
+#ggsave('plots/adaptTurning.pdf', pAnglePerf, width = 6, height = 4, units = 'in')
+
+
+# 
+# #Continuous time analysis
+# 
+# pAdaptTime <- ggplot(adaptDF, aes(x=lastIndReward, y = delta_turning, color = env, fill =env, linetype = type))+
+#   geom_smooth()+
+#   scale_fill_manual(values =c("#E69F00","#009E73"), name="Env")+
+#   scale_color_manual(values =c("#E69F00","#009E73"),  name="Env")+
+#   scale_linetype(name='Cond')+
+#   xlab('Time Since Reward')+
+#   theme_classic()+
+#   #coord_cartesian(xlim=c(2.25, 50))+
+#   #guides(fill="none")+
+#   ylab('Turning Rate')+
+#   guides(linetype = guide_legend(override.aes= list(color = "black", fill = NA)))+
+#   theme(legend.position=c(0.1,0.1), legend.justification = c(0,0),  strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank(), legend.direction = "horizontal", legend.margin=margin())
+#   
+# pAdaptTime
+# 
+# 
+# pAdaptTimeDist <- ggplot(adaptDF, aes(x=lastIndReward, y = distance, color = env, fill =env, linetype = type))+
+#   geom_smooth()+
+#   scale_fill_manual(values =c("#E69F00","#009E73"), name="Env")+
+#   scale_color_manual(values =c("#E69F00","#009E73"),  name="Env")+
+#   scale_linetype(name='Cond')+
+#   xlab('Time Since Reward')+
+#   theme_classic()+
+#   #coord_cartesian(xlim=c(2.25, 50))+
+#   #guides(fill="none")+
+#   ylab('Distance')+
+#   guides(linetype = guide_legend(override.aes= list(color = "black", fill = NA)))+
+#   theme(legend.position=c(0.1,0.9), legend.justification = c(0,1),  strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank(), legend.direction = "horizontal", legend.margin=margin())
+# 
+# pAdaptTimeDist
 ####################################################################################################
 #Pairwise distances
 ####################################################################################################
@@ -782,7 +1021,9 @@ movementDF$env <- factor(movementDF$env)
 
 #pRewardRate
 #Main behavioral plot
-pMain <-cowplot::plot_grid(pRewardRateNormalized+ theme(legend.position = c(0.5, 0), legend.justification = c(0.5,0), legend.key.height = unit(-2, "cm")), pDistTime+theme(legend.position='none') + ylab('Avg. Distance to Peers'),NULL, nrow = 1, labels = 'auto') 
+pMain <-cowplot::plot_grid(pRewardRateNormalized+ theme(legend.position = c(0.5, 0), legend.justification = c(0.5,0), legend.key.height = unit(-2, "cm")), 
+                           pAdaptDist,
+                           pDistTime+theme(legend.position='none') + ylab('Avg. Distance to Peers'),NULL, nrow = 1, rel_widths = c(1,.7,1,1), labels = 'auto') 
 #pMain
 
 ggsave('plots/behaviorTop.pdf', pMain, width = 12, height = 3, units = 'in')
@@ -791,228 +1032,20 @@ ggsave('plots/behaviorTop.pdf', pMain, width = 12, height = 3, units = 'in')
 # pRewardSItop <- cowplot::plot_grid(pRewardRate,  pCoeff_Reward, rel_widths = c(1.3,1.7), labels = 'auto')
 # pRewardSIbottom <- cowplot::plot_grid(pExpectedRewardrate + theme(legend.position = 'None'),  pCoeff_Rewardnorm, nrow = 1, labels = c('c', 'd', 'e'))                                   
 #pRewardSI <- cowplot::plot_grid(pRewardSItop,pRewardSIbottom, nrow =2 )
-pRewardSI <- cowplot::plot_grid(pRewardRate + theme(legend.position = c(0.5, 0.1), legend.justification = c(0.5,0), legend.key.height = unit(-2, "cm")),pExpectedRewardrate+ theme(legend.position = 'None'), pCoeff_Reward,  pCoeff_Rewardnorm, nrow =2 , labels = 'auto')
+
+
+pRewardSI <- cowplot::plot_grid(pRewardRate + theme(legend.position = c(0.5, 0.1), legend.justification = c(0.5,0), legend.key.height = unit(-2, "cm")),
+                                pExpectedRewardrate+ theme(legend.position = 'None'), pCoeff_Reward,  pCoeff_Rewardnorm, nrow =2 , labels = 'auto')
                                     
 ggsave('plots/rewardSI.pdf', pRewardSI, width = 12, height = 6, units = 'in')
 
+# adaptivity SI
+pAdaptSI <- cowplot::plot_grid(pCoeff_adaptDist, pAdaptAngle, pCoeff_adapt, labels = 'auto', nrow =1 )
+ggsave('plots/adaptSI.pdf', pAdaptSI, width = 12, height = 3, units = 'in')
+
+
 #Foraging SI
-pForagingSI <- cowplot::plot_grid(pCoeff_distance, null, pForagingRateTime, p_foragingRateCoeff, nrow = 2, labels = 'auto')
+
+pForagingSI <- cowplot::plot_grid(pCoeff_adapt, pCoeff_distance, null, pForagingRateTime, p_foragingRateCoeff, nrow = 3, labels = 'auto')
 ggsave('plots/foragingSI.pdf', pForagingSI, width = 12, height = 6, units = 'in')
-
-
-# #Alt layout
-# #Reward SI
-# pRewardSItop <-cowplot::plot_grid(pReward  + xlab('Condition')+ theme(legend.position=c(1,1.05)), pRewardRate,  pCoeff_Reward, labels = 'auto', nrow = 1)
-# pRewardSIbottom <- cowplot::plot_grid(pExpectedRewardrate + theme(legend.position = 'None'), pRewardRateNormalized + theme(legend.position = 'None'), pCoeff_Rewardnorm, nrow = 1, labels = c('d', 'e', 'f'))                                   
-# pRewardSI <- cowplot::plot_grid(pRewardSItop,pRewardSIbottom, nrow =2 )
-# ggsave('plots/rewardSI.pdf', pRewardSI, width = 12, height = 6.3, units = 'in')
-# 
-# 
-# #Foraging SI
-# pForagingSI <- cowplot::plot_grid(pDistTime,pCoeff_distance, pForagingRateTime, p_foragingRateCoeff, nrow = 2, labels = 'auto')
-# ggsave('plots/foragingSI.pdf', pForagingSI, width = 12, height = 6, units = 'in')
-
-
-
-
-# #pRewardNorm #Alternative reward plot
-# pPerformance<- cowplot::plot_grid(pReward+ggtitle(''), pRewardRounds+ggtitle('') + theme(legend.position = 'none'), pExpectedRewardrate+ggtitle('') + theme(legend.position = 'none'), pRewardRateNormalized+ggtitle(''),  rel_widths =  c(1,1.2, 1, 1.2), nrow = 2, labels = 'auto')
-# pPerformance
-# 
-# ggsave('plots/performancePlots.pdf', pPerformance, width = 9, height = 8, units = 'in')
-# 
-# pBehavSI <- cowplot::plot_grid(pReward +ggtitle('') , 
-#                              pRewardRounds+ggtitle('')+theme(legend.position = c(0.05,.95), legend.justification = c(0,1), legend.direction = "horizontal"),
-#                              pExpectedRewardrate+ggtitle('') + theme(legend.position = c(0.05,.7), legend.justification=c(0,1)), 
-#                              pRewardRateNormalized+ggtitle('')+ theme(legend.position = c(0.05,1), legend.justification=c(0,1), legend.direction = "horizontal"),
-#                              pForagingRate, pBlockDistance, 
-#                              ncol=3, labels='auto' )
-# pBehavSI
-# 
-# pRewardRateNormalized
-# 
-# ggsave('plots/behaviorPlot.pdf', pBehav, width = 8, height = 10, units = 'in')
-
-# #Create inset plots
-# 
-# insettedReward<-ggdraw(pRewardRate + theme(legend.position=c(0,1)))+
-#   draw_plot(pRewardInset+
-#               theme(text = element_text(size = 10),
-#                     plot.background = element_rect(fill = "transparent",colour = NA)), .25, .16, .55, .35)
-# insettedReward
-# 
-# insettedRewardNorm<-ggdraw(pRewardRateNormalized + theme(legend.position='none') )+
-#   draw_plot(pRewardNormInset+
-#               theme(text = element_text(size = 10),
-#                     plot.background = element_rect(fill = "transparent",colour = NA)), .2, .05, .55, .35)
-# insettedRewardNorm
-# pDistTime
-
-####################################################################################################
-#GRAVEYARD
-####################################################################################################
-
-
-####################################################################################################
-# Overview of data
-####################################################################################################
-# # get grasp of player DF
-# head(playerDF)
-# summary(playerDF)
-# 
-# playerDF <- playerDF %>% mutate(session=factor(session),
-#                                 type=factor(type),
-#                                 env=factor(env),
-#                                 name=factor(name),
-#                                 round=round+1)
-# 
-# # get a better grasp of the data; how many datapoints per person per round?
-# # time: 20Hz, 20 samples per second (120 * 20)
-# oneround <- playerDF %>% dplyr::filter(round==5 & type=="solo" & name=="MPIB1" & env=="random")
-# View(oneround)
-# 
-# # get grasp of block DF
-# head(blockDF)
-# summary(blockDF)
-# 
-# blockDF <- blockDF %>% mutate(name=factor(name),
-#                               session=factor(session),
-#                               type=factor(type),
-#                               env=factor(env),
-#                               round=round+1) %>% select(!id)
-# 
-# oneblockDF <- blockDF %>% dplyr::filter(round==5 & type=="solo" & name=="MPIB1" & env=="random")
-# View(oneblockDF)
-
-
-
-
-####################################################################################################
-#Covariance of trajectories
-####################################################################################################
-# #Compute unique pairs of participans
-# dat <- expand.grid(V1 = unique(playerDF$name), V2 = unique(playerDF$name))
-# colnames(dat) <- c('V1','V2')
-# pairs <- unique(as.data.frame(t(apply(dat, 1, sort ))))
-# pairs <- pairs[pairs$V1 != pairs$V2,]
-
-# 
-# trajCorDF <- data.frame()
-# for (s in unique(playerDF$session)){
-#   for (r in unique(playerDF$round)){
-#     subd <- subset(playerDF, session == s & round == r)
-#     for (pair in 1:nrow(pairs)){
-#       p1 <- subset(subd, name == pairs[pair,'V1'])
-#       p2 <- subset(subd, name == pairs[pair,'V2'])
-#       correlation <- cor(c(p1$x,p1$z),  c(p2$x,p2$z))
-#       MI <- mutinformation(round(c(p1$x,p1$z)),round(c(p2$x,p2$z)))
-#       dtw <- DTW(cbind(p1$x, p1$z), cbind(p2$x, p2$z), pointSpacing = 20) #https://rdrr.io/cran/SimilarityMeasures/man/DTW.html; point spacing of 20 allows for a 1 second allowance
-#       trajCorDF <- rbind(trajCorDF, data.frame(session = s, round = r, cor = correlation, MI = MI, dtw = dtw, pair = paste0(pairs[pair,'V1'], '-', pairs[pair,'V2']),type = subd$type[1], env = subd$env[1] ))
-#     }
-#   }
-# }
-# saveRDS(trajCorDF,'simData/trajCor.RDS')
-# trajCorDF <- readRDS('simData/trajCor.RDS')
-# 
-# 
-# pTrajCor <- ggplot(trajCorDF, aes(x = type, y = cor, color = env))+
-#   #geom_histogram(aes(y = stat(density) * .5), binwidth = .5, color = 'black', alpha = 0.7, size = 0.4) + 
-#   stat_summary(fun.y = mean, geom= 'point')+
-#   stat_summary(fun.y = mean, aes(group=env), geom= 'line')+
-#   stat_summary(fun.data = "mean_cl_boot", geom= 'errorbar', width = .1)+
-#   scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
-#   xlab('Condition')+ ylab('Correlation' )+
-#   theme(legend.position=c(0.05,1),legend.justification=c(0,1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
-# pTrajCor
-# 
-# #Dynamic time warping; https://link.springer.com/article/10.1007/s00265-019-2761-1 Equation 3
-# pDTW <- ggplot(trajCorDF, aes(x = type, y = dtw, color = env))+
-#   #geom_histogram(aes(y = stat(density) * .5), binwidth = .5, color = 'black', alpha = 0.7, size = 0.4) + 
-#   stat_summary(fun.y = mean, geom= 'point')+
-#   stat_summary(fun.y = mean, aes(group=env), geom= 'line')+
-#   stat_summary(fun.data = mean_cl_boot, geom= 'errorbar', width = .1)+
-#   scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
-#   xlab('Condition')+ ylab('Path Distance (DTW)' )+
-#   theme(legend.position='none', strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
-# pDTW
-# 
-# #Mutual information
-# pTrajMI <- ggplot(trajCorDF, aes(x = env, y = MI, color = env))+
-#   #geom_histogram(aes(y = stat(density) * .5), binwidth = .5, color = 'black', alpha = 0.7, size = 0.4) +
-#   stat_summary(fun.y = mean, geom= 'point')+
-#   stat_summary(fun.y = mean, geom= 'line')+
-#   stat_summary(fun.data = mean_cl_boot, geom= 'errorbar', width = .1)+
-#   scale_color_manual(values = c("#999999", "#E69F00"), name = '')+
-#   facet_grid(~type)+
-#   xlab('')+ ylab('Mutual Information' )+
-#   theme(legend.position='none', strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
-# pTrajMI
-
-
-#cowplot::plot_grid(pTrajCor, pDTW, nrow = 2, labels = 'auto')
-####################################################################################################
-#Regressions
-####################################################################################################
-# TIME
-# # frequentist
-# wslsTime1f = lmer(log(time_between_hits) ~  was_reward_previous*type + (1|id), data = foragingRateDF) #interaction with type
-# wslsTime2f = lmer(log(time_between_hits) ~ was_reward_previous*env + (1|id), data = foragingRateDF) #adds interaction with env 
-# wslsTime3f = lmer(log(time_between_hits) ~ was_reward_previous*env*type + (1|id), data = foragingRateDF) #adds interaction with env and type 
-# tab_model(wslsTime1f, wslsTime2f, wslsTime3f)
-# multiplot(wslsTime1f, wslsTime2f, wslsTime3f)
-# 
-# # bayesian
-# wslsTime1b = run_model(brm(log(time_between_hits) ~  was_reward_previous*type + (1|id), data = foragingRateDF, chains = 4, cores = 4, control=list(adapt_delta=0.99,max_treedepth=30)), modelName = "wslsTime1")
-# wslsTime2b = run_model(brm(log(time_between_hits) ~ was_reward_previous*env + (1|id), data = foragingRateDF, chains = 4, cores = 4, control=list(adapt_delta=0.99,max_treedepth=30)), modelName = "wslsTime2")
-# wslsTime3b = run_model(brm(log(time_between_hits) ~ was_reward_previous*env*type + (1|id), data = foragingRateDF, chains = 4, cores = 4, control=list(adapt_delta=0.99,max_treedepth=30)), modelName = "wslsTime3")
-# #tab_model(wslsTime1b, wslsTime2b, wslsTime3b)
-# plot_model(wslsTime3b, type = 'std', show.values = TRUE, value.offset = .3, sort.est = TRUE)
-# 
-# # plot marginal effects
-# me <- marginal_effects(wslsTime3b)
-# me
-# 
-# # DISTANCE
-# # frequentist
-# wslsDist1f = lmer(euclidian ~  was_reward_previous*type + (1|id), data = blockDistanceDF) #interaction with type
-# wslsDist2f = lmer(euclidian ~ was_reward_previous*env + (1|id), data = blockDistanceDF) #adds interaction with env 
-# wslsDist3f = lmer(euclidian ~ was_reward_previous*env*type + (1|id), data = blockDistanceDF) #adds interaction with env and type 
-# tab_model(wslsDist1f, wslsDist2f, wslsDist3f)
-# multiplot(wslsDist1f, wslsDist2f, wslsDist3f)
-# 
-# # bayesian
-# wslsDist1b = run_model(brm(euclidian ~  was_reward_previous*type + (1|id), data = blockDistanceDF, chains = 4, cores = 4, control=list(adapt_delta=0.99,max_treedepth=30)), modelName = "wslsDist1")
-# wslsDist2b = run_model(brm(euclidian ~ was_reward_previous*env + (1|id), data = blockDistanceDF, chains = 4, cores = 4, control=list(adapt_delta=0.99,max_treedepth=30)), modelName = "wslsDist2")
-# wslsDist3b = run_model(brm(euclidian ~ was_reward_previous*env*type + (1|id), data = blockDistanceDF, chains = 4, cores = 4, control=list(adapt_delta=0.99,max_treedepth=30)), modelName = "wslsDist3")
-# #tab_model(wslsDist1b, wslsDist2b, wslsDist3b)
-# plot_model(wslsDist3b, type = 'std', show.values = TRUE, value.offset = .3, sort.est = TRUE)
-
-
-
-
-
-####################################################################################################
-# Aggregate regression plot
-####################################################################################################
-
-# 
-# allRegDF <- data.frame()         
-# modelList <- list(mRewardNorm, mDist, mBlocksDestroyed)
-# modelNames <- c('Norm. Reward', 'Avg. Distance', 'Blocks Destroyed')
-# coeffs <- c('b_envsmooth', 'b_typegroup', 'b_envsmooth:typegroup')
-# for (m in 1:length(modelList)){
-#   regM <- modelList[[m]]
-#   post <-posterior_samples(regM) #posterior samples
-#   ests <- data.frame((sapply(coeffs, FUN=function(coef){unlist(post[coef])})))
-#   mDF<- data.frame(model = modelNames[[m]], median = apply(ests,2,median), lower = apply(ests,2,hdi)[,1],upper = apply(ests,2,hdi)[2,], coef  =  c('envSmooth', 'condGroup', 'smooth:group'))
-#   allRegDF <- rbind(allRegDF, mDF)
-# }
-# 
-# 
-# 
-# ggplot(allRegDF, aes(x = coef, y = median, color = model))+
-#   geom_point(position=position_dodge(width=0.2))+
-#   geom_errorbar(aes(ymin= lower, ymax = upper), width = 0.2, position=position_dodge(width=0.2))+
-#   coord_flip(expand = TRUE)
-
 

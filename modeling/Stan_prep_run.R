@@ -23,7 +23,7 @@ standardize <- function(x) {
 }
 
 #Set working directory
-setwd("~/GitLab/producerScrounger/cogmodeling/data/modelFeatures")
+setwd("~/modeling/data/modelFeatures")
 
 #Get all file names
 files <- list.files(pattern = "")

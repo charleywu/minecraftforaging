@@ -1,4 +1,5 @@
 #analysis of Pull events
+# Charley Wu
 rm(list=ls()) #house keeping
 
 
@@ -214,11 +215,14 @@ for (threshold in c(0.05, 0.1, 0.15)){
   #Compute mean and sd
   meanEventDF <- allCombs%>% group_by(env, roundtype, type) %>% dplyr::summarize(meanEvents = sum(events)/(length(unique(eventDF$session))*4), n = length(events), sdEvents = sd(c(events, rep(0,length(unique(eventDF$session))*4 - length(events) ))))
   meanEventDF$seEvents <-meanEventDF$sdEvents / sqrt(meanEventDF$n) #standard error
+  #each individual session
+  indEventDF <-  allCombs%>% group_by(session, env, roundtype, type) %>% dplyr::summarize(meanEvents = mean(events))
   #Pull events only
   pPulls<- ggplot(subset(meanEventDF, type=='pull'), aes(x = roundtype,y = meanEvents, fill = env))+
     geom_bar(stat = 'identity', color = 'black',position = "dodge2")+
-    geom_errorbar(aes(ymin = meanEvents - seEvents, ymax = meanEvents + seEvents), width = 0.3,  position = position_dodge(width = 0.9))+
+    geom_errorbar(aes(ymin = meanEvents - (qnorm(0.975)*seEvents), ymax = meanEvents + (qnorm(0.975)*seEvents)), width = 0.3,  position = position_dodge(width = 0.9))+
     #facet_grid(~env)+
+    geom_quasirandom(data = subset(indEventDF, type == 'pull'), dodge.width = 0.9, alpha = 0.3, size= 0.5)+
     ylab('Pulls per Round')+
     xlab('')+
     ggtitle(paste0('Threshold = ', threshold, '; n = ',nrow(eventDF) ))+
@@ -323,13 +327,16 @@ pEvents <- ggplot(meanEventDF, aes(x = roundtype,y = meanEvents, fill = env))+
 pEvents
 
 #Pull events only
+indMeans <- sessionEventsDF %>% subset(type=='pull') %>% group_by(session, env, roundtype) %>% dplyr::summarize(meanEvents = mean(events))
 pPulls<- ggplot(subset(meanEventDF, type=='pull'), aes(x = roundtype,y = meanEvents, fill = env))+
   geom_bar(stat = 'identity', color = 'black',position = "dodge2")+
-  geom_errorbar(aes(ymin = meanEvents - seEvents, ymax = meanEvents + seEvents), width = 0.3,  position = position_dodge(width = 0.9))+
+  geom_errorbar(aes(ymin = meanEvents - (qnorm(0.975)*seEvents), ymax = meanEvents + (qnorm(0.975)*seEvents)), width = 0.3,  position = position_dodge(width = 0.9))+
+  geom_quasirandom(data = indMeans, dodge.width = 0.9, alpha = 0.3, size= 0.5)+
   #facet_grid(~env)+
   ylab('Pulls per Round  ')+
   xlab('')+
   scale_fill_manual(values= c("#E69F00","#009E73"),'Environment')+
+  scale_color_manual(values= c("#E69F00","#009E73"),'Environment')+
   theme_classic()+
   theme(legend.position=c(0.05,1), legend.justification = c(0,1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
 pPulls
@@ -691,13 +698,14 @@ fixedDF$upper <- preds[,4]
 
 pLeaderRewards <- ggplot(rewardDifferential, aes(x=role, y = rewards, color=role))+
   #geom_line(aes(group=eventId), color = 'black', alpha = 0.05)+
-  #geom_quasirandom(alpha = 0.2)+
+  geom_quasirandom(alpha = 0.2)+
   #stat_summary(fun.y=mean, geom='point')+
   geom_point(data = fixedDF)+
   labs(x= '', y = 'Rewards\n During Pull')+
   scale_color_manual(values=leaderPal)+
   geom_errorbar(data = fixedDF, aes(ymin = lower, ymax = upper), width = 0.2)+
-  theme(legend.position = 'none', axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  #theme(legend.position = 'none', axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  theme(legend.position = 'none')
   
 pLeaderRewards
 
@@ -728,7 +736,7 @@ ggsave('plots/scoreSocFeatures.pdf', pScoreSoc, width = 4.2, height = 3, units =
 pAggLeft <- cowplot::plot_grid( NULL,  pPullDist, pPullTraj, nrow = 3, labels = c('a', '', ''), rel_heights = c(.2,1,2))
 pAggBottomRight <- cowplot::plot_grid(p1+ylab('Avg. Reward'), pLeaderRewards, nrow = 1, labels = c('d', 'e'), align = 'v')
 #pPullAggRight<- cowplot::plot_grid(pPulls,NULL,pPullReg, pAggBottomRight, rel_heights = c(1.15, -.1, .8, 1),  ncol = 1, labels  = c('b','', 'c', ''))
-pPullAggRight<- cowplot::plot_grid(pPulls + theme(legend.position=c(0.05, 1.05), plot.margin = unit(c(5.5, 5,5, 5.5, 0), "pt")), p1+ylab('Avg. Reward') + theme(plot.margin = unit(c(0, 5,5, 5.5, 5), "pt")),  NULL, pLeaderRewards + theme(plot.margin = unit(c(5, 5,5, 5.5, -10), "pt")),  rel_heights = c(1.2, 1,.1, 1), ncol = 1, labels  = c('b', 'c', '', 'd'), hjust = -.1, vjust = c(1.5, .5,0,  0))
+pPullAggRight<- cowplot::plot_grid(pPulls + theme(legend.position=c(0.05, 1.05), plot.margin = unit(c(5.5, 5,5, 5.5, 0), "pt")), p1+ylab('Avg. Reward') + theme(plot.margin = unit(c(0, 5,5, 5.5, 5), "pt")),  NULL, pLeaderRewards + theme(plot.margin = unit(c(5, 5,5, 5.5, -10), "pt")),  rel_heights = c(1.2, 1,.1, .7), ncol = 1, labels  = c('b', 'c', '', 'd'), hjust = -.1, vjust = c(1.5, .5,0,  0))
 
 pPullAgg <- cowplot::plot_grid(pAggLeft, pPullAggRight, ncol = 2)
 pPullAgg
@@ -745,7 +753,7 @@ ggsave('plots/pullLeadership.pdf', p, width = 8, height = 5, units = 'in')
 #########################################################
 # Grave Yard
 #########################################################
-\
+
 #########################################################
 # Illustration of an anchor
 #########################################################

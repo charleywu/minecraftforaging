@@ -1,19 +1,14 @@
 #Dynamic analyses
-# 
+#Charley Wu
 rm(list=ls()) #house keeping
 
 
 #load packages
-packages <- c('tidyverse','zoo',  'DescTools','brms','arrow')
+packages <- c('tidyverse','zoo',  'DescTools', 'arrow')
 invisible(lapply(packages, require, character.only = TRUE))
 
 #source('statisticalTests.R')
 #source('utilities.R')
-
-
-theme_set(theme_classic()) #set theme
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") #colorblind palette
-
 
 #Utility function
 lag_func <- function(x, k = 1, pad = NA){
@@ -28,6 +23,7 @@ lag_func <- function(x, k = 1, pad = NA){
 
 # # ####################################################################################################
 # # # Load and process data
+# # # Saved and reloaded later in the code, to save time
 # # ####################################################################################################
 # blockDF <- data.frame()
 # playerDF <- data.frame()
@@ -93,15 +89,17 @@ lag_func <- function(x, k = 1, pad = NA){
 # distanceDF <- distanceDF[with(distanceDF, order(session, id,env, type,round, time)), ] #order by inId
 # dynamicsDF$proximity <-  distanceDF %>%group_by(session, id,env, type, round, time ) %>% dplyr::summarize(proximity = mean(1/distance)) %>% pull(proximity)
 # 
-# #save to disk
-# write_feather(dynamicsDF, 'dynamicData/individualDynamics.feather')
+# # #save to disk
+# # write_feather(dynamicsDF, 'dynamicData/individualDynamics.feather')
+# # saveRDS(dynamicsDF, 'dynamicData/individualDynamics.RDS') #alternative file format
 
 ####################################################################################################
 # Compute time-lagged correlations (Individual level)
 ####################################################################################################
-
 dynamicsDF <- read_feather('dynamicData/individualDynamics.feather') #load data
+turningDF <- read_feather('dynamicData/trajectories.feather') #load in trajectory data from trajectories.R
 
+#define timesteps and offsets
 timeSeq <- seq(0,120, by=.05)
 offsets <- seq(-20,20, by=.05)
 numPermutations <- 100
@@ -121,7 +119,10 @@ for (i in unique(dynamicsDF$id)){
   for (r in unique(blocksub$round)){
     #r <- unique(blocksub$round)[4]
     #Subset data
-    subDF <- subset(dynamicsDF, id == i & round == r)
+    subDynamicsDF <- dynamicsDF %>% filter(id == i & round == r) %>% arrange(time)
+    subTurningDF <- turningDF %>% filter(id == i & round == r) %>% arrange(time)
+    subDF <- merge(subDynamicsDF,subTurningDF,by=c("id","round", "time")) 
+    subDF <- subDF %>% arrange(id, round, time)
     #Create dataframe for storing results
     corDF <- data.frame(id = i, session = unique(blocksub$session), round = r,  env = unique(subDF$env), type = unique(subDF$type), offset = offset) 
     #compute reward offset
@@ -138,6 +139,18 @@ for (i in unique(dynamicsDF$id)){
     #reward ~ proximity
     corDF$rewardProx <- FisherZ(cor.test(rewardOffset,subDF$proximity)$estimate) -  mean(sapply(1:numPermutations, FUN=function(i) {
       FisherZ(cor.test(rewardOffset,sample(subDF$proximity))$estimate)}), na.rm=TRUE)
+    
+    #reward ~ gaze
+    corDF$rewardGaze <- FisherZ(cor.test(rewardOffset,abs(subDF$delta_gaze))$estimate) -  mean(sapply(1:numPermutations, FUN=function(i) {
+      FisherZ(cor.test(rewardOffset,abs(sample(subDF$delta_gaze)))$estimate)}), na.rm=TRUE)
+    
+    #reward ~ turning
+    corDF$rewardTurning <- FisherZ(cor.test(rewardOffset,abs(subDF$delta_turning))$estimate) -  mean(sapply(1:numPermutations, FUN=function(i) {
+      FisherZ(cor.test(rewardOffset,abs(sample(subDF$delta_turning)))$estimate)}), na.rm=TRUE)
+    
+    #reward ~ straightness
+    corDF$rewardStraightness <- FisherZ(cor.test(rewardOffset,subDF$straightness)$estimate) -  mean(sapply(1:numPermutations, FUN=function(i) {
+      FisherZ(cor.test(rewardOffset,sample(subDF$straightness))$estimate)}), na.rm=TRUE)
     
     #proximity ~ visIn
     proxLagged <- lag_func(subDF$proximity,  as.integer(offset/.05))

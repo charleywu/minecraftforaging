@@ -1,4 +1,5 @@
-
+#Temporal dynamics (depends on initial computations are performed in individualDynamics.R)
+# Charley Wu
 rm(list=ls()) #house keeping
 
 
@@ -27,36 +28,47 @@ lag_func <- function(x, k = 1, pad = NA){
 ####################################################################################################
 # Individual level Analyses: run in individualDynamics.R
 ####################################################################################################
-# #Compile individual dataframes from each time offset
-# indDynamicsDF <- data.frame()
-# dataFolder <- list.files('dynamicData/individual/')   
-# for (file in dataFolder){
-#   subdf <- readRDS(paste0('dynamicData/individual/', file))
-#   indDynamicsDF <- rbind(indDynamicsDF, subdf)  
-#   
-# }
-# 
-# #add factors
-# indDynamicsDF$id <- factor(indDynamicsDF$id)
-# indDynamicsDF$session <- factor(indDynamicsDF$session)
-# indDynamicsDF$env <- factor(indDynamicsDF$env)
-# indDynamicsDF$type <- factor(indDynamicsDF$type)
-#
-# saveRDS(indDynamicsDF, 'dynamicData/individualDynamics.Rds')
-# 
+#Compile individual dataframes from each time offset
+indDynamicsDF <- data.frame()
+dataFolder <- list.files('dynamicData/individual/')
+for (file in dataFolder){
+  subdf <- readRDS(paste0('dynamicData/individual/', file))
+  indDynamicsDF <- rbind(indDynamicsDF, subdf)
+
+}
+
+#add factors
+indDynamicsDF$id <- factor(indDynamicsDF$id)
+indDynamicsDF$session <- factor(indDynamicsDF$session)
+indDynamicsDF$env <- factor(indDynamicsDF$env)
+indDynamicsDF$type <- factor(indDynamicsDF$type)
+
+saveRDS(indDynamicsDF, 'dynamicData/individualDynamics.Rds')
+
 # # ####################################################################################################
 # # # Perform permutation test to find threshold for random clusters
-# # ####################################################################################################
+# Very slow, which is why it is commented out for now
+# ####################################################################################################
 # indDynamicsDF <- readRDS('dynamicData/individualDynamics.Rds')
-# mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut' )
+# mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut')
+# 
+# #Perform permutation analysis
+# permNum <-10000 #number of permutations
+# #permNum <- 10 #DEBUG for faster testing; still takes about 30 minutes
+# n_offset <- 801
+# 
+# permDF <- data.frame()
 # 
 # for (gameType in c('solo', 'group')){
 #   for (envType in c('random', 'smooth')){ #envs
 #     for (comp in mainComparisons){ #comparisons
 #       #DEBUG
+#       #gameType <- 'contrast'
 #       #envType <- 'smooth'
-#       #comp <- 'rewardVisOut'
-#       timeSeries <- indDynamicsDF %>% filter(env == envType & type == gameType) %>% mutate(idround = paste0(id, round)) %>%  group_by(idround, offset) %>% select(idround, offset, all_of(comp)) %>%  acast(idround~offset, value.var=comp)
+#       #comp <- 'rewardProx'
+#       timeSeries <- indDynamicsDF %>% filter(env == envType & type == gameType) %>%
+#         mutate(idround = paste0(id, round)) %>%  group_by(idround, offset) %>%
+#         select(idround, offset, all_of(comp)) %>% acast(idround~offset, value.var=comp)
 #       signifMat <- matrix(rep(NA,permNum*n_offset), nrow = permNum, ncol =n_offset) #set up a significance matrix
 #       #Iterate through 10k permutations
 #       for (i in 1:permNum){
@@ -77,15 +89,16 @@ lag_func <- function(x, k = 1, pad = NA){
 # }
 # 
 # saveRDS(permDF, 'dynamicData/indPermutations.Rds')
-# #
+# 
 # # # ####################################################################################################
 # # # # Look for significant clusters in the real data
 # # ####################################################################################################
-# 
 # # Find clusters
+# indDynamicsDF <- readRDS('dynamicData/individualDynamics.Rds')
+# 
 # clusterDF <- data.frame()
 # offsets <-sort(unique(indDynamicsDF$offset))
-# mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut' )
+# mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut', 'rewardGaze', 'rewardTurning', 'rewardStraightness' )
 # 
 # for (gameType in c('solo', 'group')){
 #   for (envType in c('random', 'smooth')){ #envs
@@ -102,21 +115,18 @@ lag_func <- function(x, k = 1, pad = NA){
 #   }
 # }
 # saveRDS(clusterDF, 'dynamicData/individualClusters.Rds')
-# #
 
-####################################################################################################
-# Plot time-lagged correlations (Individual level level) run in individualDynamics.R
-####################################################################################################
-
+###################################################################################################
+Permutation correction of clusters
+###################################################################################################
+#read data
 indDynamicsDF <- readRDS('dynamicData/individualDynamics.Rds')
 permDF <- readRDS('dynamicData/indPermutations.Rds')
 clusterDF <- readRDS('dynamicData/individualClusters.Rds')
 
-
-
 #Compute permutation corrected clusters
 clusterDF$signifCorrected <- NA
-mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut' )
+mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut')
 
 #Remove cluster signif that is shorter than the permutation length
 for (gameType in c('solo', 'group')){
@@ -125,8 +135,8 @@ for (gameType in c('solo', 'group')){
       #find significant time points
       # envType <- 'smooth' DEBUG
       # comp <- 'rewardVisOut'
-      subCluster <-  clusterDF %>% filter(env ==envType & type == gameType & comparison == comp) %>% pull(signif)
-      threshold <- permDF %>% filter(env ==envType & type == gameType & comparison==comp) %>% pull(clusterLim) %>% round( digits=0)
+      subCluster <-  clusterDF %>% dplyr::filter(env ==envType & type == gameType & comparison == comp) %>% pull(signif)
+      threshold <- permDF %>% dplyr::filter(env ==envType & type == gameType & comparison==comp) %>% pull(clusterLim) %>% round( digits=0)
       #threshold <- 0 #DEBUG
       signifCorrected <- rep(FALSE, length(subCluster)) #initialize dummy variable
       #run length encoding
@@ -135,7 +145,7 @@ for (gameType in c('solo', 'group')){
       if (1 %in% validClusters){
         startPoints <- c(1, cumsum(clusters$lengths)[validClusters-1]+1)
       }else{
-        startPoints <- cumsum(clusters$lengths)[validClusters-1]+1 #where each survivng cluster starts
+        startPoints <- cumsum(clusters$lengths)[validClusters-1]+1 #where each surviving cluster starts
       }
       endPoints <- startPoints + clusters$lengths[validClusters] -1
       if (length(validClusters)>0){
@@ -152,9 +162,17 @@ for (gameType in c('solo', 'group')){
   }
 }
 
-# Plotting dataframe
-plotDF <- indDynamicsDF%>% pivot_longer(mainComparisons, names_to = 'comparison')
+saveRDS(clusterDF, 'dynamicData/correctedClusters.Rds')
 
+####################################################################################################
+#  Plot results
+####################################################################################################
+indDynamicsDF <- readRDS('dynamicData/individualDynamics.Rds')
+clusterDF <- readRDS('dynamicData/correctedClusters.Rds')
+
+# Plotting dataframe
+mainComparisons <- c('rewardVisOut', 'rewardVisIn', 'rewardProx', 'proxVisIn', 'proxVisOut', 'visInOut')
+plotDF <- indDynamicsDF %>% pivot_longer(mainComparisons, names_to = 'comparison')
 
 plotDF <- plotDF %>% group_by(env,type, offset, comparison) %>%
   dplyr::summarize(zscore = mean(value, na.rm=TRUE), ssd = sd(value, na.rm=TRUE), count = n()) %>%
@@ -173,13 +191,15 @@ for (gameType in c('solo', 'group')){
     }
   }
 }
+
 plotDF$comparison <- factor(plotDF$comparison, levels =  c('rewardProx', 'rewardVisOut', 'rewardVisIn', 'proxVisIn', 'proxVisOut', 'visInOut' ),
                             labels = c('Reward ~ Prox', 'Reward ~ OutVis', 'Reward ~ InVis', 'Prox ~ InVis', 'Prox ~ OutVis', 'InVis ~ OutVis'))
 
+plotDF$causalDirection <- ifelse(plotDF$offset <0, -1, 1)
 
+#NOTE: Offset has been flipped to provide a more intuitive explanation in the main text. In practice, we applied the offset to reward, but the flow of analysis makes it easier to talk about reward driven changes in behavior first. So the methods describe the inverse of applying the offset to behavior, where this flip in the sign of the offset makes the results consistent
 
-
-pInd <- ggplot(plotDF, aes(x = offset, y = zscore, color = env, alpha = signif_alpha))+
+pInd <- ggplot(plotDF, aes(x = -offset, y = zscore, color = env, alpha = signif_alpha))+
   geom_hline(yintercept = 0,  color = 'black')+
   geom_vline(xintercept = 0, linetype = 'dashed', color = 'black')+
   geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci, fill = env), alpha = 0.3, color = NA)+
@@ -195,18 +215,95 @@ pInd <- ggplot(plotDF, aes(x = offset, y = zscore, color = env, alpha = signif_a
   scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
   #scale_alpha_manual(values=c(0.2,0.8)) +
   scale_alpha(guide = 'none')+
-  theme(legend.position=c(0,1),legend.justification=c(0,1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+  theme(legend.position=c(0.15,1),legend.justification=c(0,1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
 
 pInd
 
-
 #ggsave('plots/fullIndDynamics.pdf', pInd, width = 14, height = 8, units= 'in' )
+
+####################################################################################################
+#  Group - solo contrast 
+####################################################################################################
+
+#Now with contrasts
+contrastDF <- indDynamicsDF %>% pivot_longer(mainComparisons, names_to = 'comparison')
+
+contrastDF <- contrastDF %>% group_by(env,type, offset, comparison) %>%
+  dplyr::summarize(zscore = mean(value, na.rm=TRUE), ssd = sd(value, na.rm=TRUE), count = n()) %>% #compute means and SDs of each line, as in the main text figure
+  mutate(se = ssd/sqrt(count)) %>% #compute SE of each line
+  group_by(env, offset, comparison) %>% summarize(contrast = zscore[type=='group'] - zscore[type=='solo'], seDiff = sqrt(se[type=='group']^2 + se[type=='solo']^2),sdDiff = sqrt(ssd[type=='group']^2 + ssd[type=='solo']^2), count = mean(count)) %>% #Now regroup by aggregating over type, and compute difference in the zscores for the contrast. The SE of this diff is sqrt(se1^2 + se2^2)
+  mutate(lower_ci = contrast - (qnorm(0.975)*seDiff), #now compute CIs
+         upper_ci = contrast + (qnorm(0.975)*seDiff),
+         pvalue = pt(contrast / (sdDiff/sqrt(count)), count-1) #Compute p-value of paired t-test from difference of means and based on dof=n-1 
+         )
+
+contrastDF$signif <-ifelse(contrastDF$pvalue<.05, 1, 0) #compute significance based on p<0.05
+
+#correct for max cluster width
+contrastDF$signif_alpha <- NA
+for (envType in c('random', 'smooth')){ #envs
+  for (comp in mainComparisons){ #comparisons
+    #DEBUG:
+    #env <- "smooth"
+    #comp <- "rewardProx"
+    subCluster <-  contrastDF %>% dplyr::filter(env ==envType  & comparison == comp) %>% pull(signif)
+    threshold <- permDF %>% dplyr::filter(env ==envType & comparison==comp) %>% pull(clusterLim) %>% max(na.rm = TRUE) %>% round( digits=0)
+    #threshold <- 0 #DEBUG
+    signifCorrected <- rep(FALSE, length(subCluster)) #initialize dummy variable
+    #run length encoding
+    clusters <- rle(subCluster)
+    validClusters <- which(clusters$lengths >= threshold & clusters$values == 1)
+    if (1 %in% validClusters){
+      startPoints <- c(1, cumsum(clusters$lengths)[validClusters-1]+1)
+    }else{
+      startPoints <- cumsum(clusters$lengths)[validClusters-1]+1 #where each surviving cluster starts
+    }
+    endPoints <- startPoints + clusters$lengths[validClusters] -1
+    if (length(validClusters)>0){
+      for (vc in 1:length(validClusters)){
+        start <- startPoints[vc]
+        end <- endPoints[vc]
+        #cat(subCluster[start:end]) #DEBUG
+        signifCorrected[start:end] <- TRUE
+      }
+    }
+    contrastDF[contrastDF$env == envType  & contrastDF$comparison == comp, 'signif_alpha'] <- as.numeric(signifCorrected)  
+  }
+}
+
+contrastDF$comparison <- factor(contrastDF$comparison, levels =  c('rewardProx', 'rewardVisOut', 'rewardVisIn', 'proxVisIn', 'proxVisOut', 'visInOut' ),
+                            labels = c('Reward ~ Prox', 'Reward ~ OutVis', 'Reward ~ InVis', 'Prox ~ InVis', 'Prox ~ OutVis', 'InVis ~ OutVis'))
+
+
+pContrast <- ggplot(contrastDF, aes(x = -offset, y = contrast, color = env, alpha = signif_alpha))+
+  geom_hline(yintercept = 0,  color = 'black')+
+  geom_vline(xintercept = 0, linetype = 'dashed', color = 'black')+
+  geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci, fill = env), alpha = 0.3, color = NA)+
+  geom_line()+
+  #geom_line(plotDF, mapping=aes(x = offset, y = signif_y, color = env), na.rm = TRUE, size = 1)+
+  #facet_grid(~comparison)+
+  facet_wrap(comparison~.,scales='free')+
+  #ggh4x::facet_grid2(comparison ~. , scales = "free_y", independent = "y")+
+  theme_classic()+
+  ylab('Group - Solo contrast\n Temporal Correlations (z-scored)')+
+  xlab('Offset (s)')+
+  scale_fill_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
+  scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
+  #scale_alpha_manual(values=c(0.2,0.8)) +
+  scale_alpha(guide = 'none')+
+  theme(legend.position=c(0.15,1),legend.justification=c(0,1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+
+pContrast
+
+sort(-subset(contrastDF, comparison =='Reward ~ OutVis' & signif_alpha == 1 & env == 'smooth')$offset)
+
+ggsave('plots/ContrastDynamics.pdf', pContrast, width = 12, height = 6)
 
 ####################################################################################################
 #  Group rounds only 
 ####################################################################################################
 
-pIndMainRewardProx <- ggplot(subset(plotDF, comparison =='Reward ~ Prox' & type == 'group'), aes(x = offset, y = zscore, color = env, alpha = signif_alpha))+
+pIndMainRewardProx <- ggplot(subset(plotDF, comparison =='Reward ~ Prox' & type == 'group'), aes(x = -offset, y = zscore, color = env, alpha = signif_alpha))+
   geom_hline(yintercept = 0,  color = 'black')+
   geom_vline(xintercept = 0, linetype = 'dashed', color = 'black')+
   geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci, fill = env), alpha = 0.3, color = NA)+
@@ -221,14 +318,16 @@ pIndMainRewardProx <- ggplot(subset(plotDF, comparison =='Reward ~ Prox' & type 
   scale_fill_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
   scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
   scale_alpha(guide = 'none')+
-  theme(legend.position = c(0,1), legend.justification = c(0, 1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
+  theme(legend.position = c(.95,1), legend.justification = c(1, 1), strip.background=element_blank(), legend.background=element_blank(),legend.key=element_blank())
 
 pIndMainRewardProx
+
+
 
 sort(subset(plotDF, comparison =='Reward ~ Prox' & type == 'group' & signif_alpha == 1 & env == 'smooth')$offset)
 
 
-pIndMainOut <- ggplot(subset(plotDF, comparison =='Reward ~ OutVis' & type == 'group'), aes(x = offset, y = zscore, color = env, alpha = signif_alpha))+
+pIndMainOut <- ggplot(subset(plotDF, comparison =='Reward ~ OutVis' & type == 'group'), aes(x = -offset, y = zscore, color = env, alpha = signif_alpha))+
   geom_hline(yintercept = 0,  color = 'black')+
   geom_vline(xintercept = 0, linetype = 'dashed', color = 'black')+
   geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci, fill = env), alpha = 0.3, color = NA)+
@@ -238,7 +337,7 @@ pIndMainOut <- ggplot(subset(plotDF, comparison =='Reward ~ OutVis' & type == 'g
   theme_classic()+
   ylab('Temporal Correlation (z-score)')+
   xlab('Offset (s)')+
-  coord_cartesian(xlim = c(-5, 15),ylim=c(-.0075,.0035), expand = FALSE)+
+  coord_cartesian(xlim = c(-15, 5),ylim=c(-.0075,.0035), expand = FALSE)+
   ggtitle('Reward ~ Visible Peers (Out-degree)')+
   scale_fill_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
   scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
@@ -249,7 +348,7 @@ pIndMainOut
 sort(subset(plotDF, comparison =='Reward ~ OutVis' & type == 'group' & signif_alpha == 1 & env == 'smooth')$offset)
 plot(sort(subset(plotDF, comparison =='Reward ~ OutVis' & type == 'group' & signif_alpha == 1 & env == 'random')$offset))
 
-pIndMainIn <- ggplot(subset(plotDF, comparison =='Reward ~ InVis' & type == 'group'), aes(x = offset, y = zscore, color = env, alpha = signif_alpha))+
+pIndMainIn <- ggplot(subset(plotDF, comparison =='Reward ~ InVis' & type == 'group'), aes(x = -offset, y = zscore, color = env, alpha = signif_alpha))+
   geom_hline(yintercept = 0,  color = 'black')+
   geom_vline(xintercept = 0, linetype = 'dashed', color = 'black')+
   geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci, fill = env), alpha = 0.3, color = NA)+
@@ -259,7 +358,7 @@ pIndMainIn <- ggplot(subset(plotDF, comparison =='Reward ~ InVis' & type == 'gro
   theme_classic()+
   ylab('Temporal Correlation (z-score)')+
   xlab('Offset (s)')+
-  coord_cartesian(xlim = c(-5, 15), ylim=c(-.014,.007),expand = FALSE)+
+  coord_cartesian(xlim = c(-15, 5), ylim=c(-.014,.007),expand = FALSE)+
   ggtitle('Reward ~ Observers (In-degree)')+
   scale_fill_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
   scale_color_manual(values =  c("#E69F00","#009E73"), name = 'Environment')+
@@ -270,7 +369,7 @@ pIndMainIn
 plot(sort(subset(plotDF, comparison =='Reward ~ InVis' & type == 'group' & signif_alpha == 1 & env == 'smooth')$offset))
 
 
-p <- cowplot::plot_grid( pIndMainRewardProx, pIndMainOut, pIndMainIn, nrow = 1, labels = c('g', 'h','i'))
+p <- cowplot::plot_grid(NULL, pIndMainRewardProx+ggtitle('Reward ~ Proximity\n                (1/Distance)'), pIndMainOut+ggtitle('Reward ~ Vis. Peers\n                (Out-Degree)'), pIndMainIn +ggtitle('Reward ~ Observers\n                (In-Degree)'), nrow = 1,rel_widths = c(.6, 1,1,1),  labels = c('h', 'i','j', 'k'))
 p
 
 ggsave('plots/dynamicsMain.pdf',p, width = 12, height = 3, units = 'in')
@@ -350,7 +449,28 @@ ggsave('plots/dynamicsSolo.pdf',pSI, width = 12, height = 3, units = 'in')
 
 
 
+#Illustrative plot
+dynamicsDF <- read_feather('dynamicData/individualDynamics.feather') #load data
 
+#choose an illustrative round
+i <- unique(dynamicsDF$id)[18]
+r <- unique(dynamicsDF$round)[10]
+subdf <- subset(dynamicsDF, id==i & round == r & time>30 & time <90)
+
+pRewardLine <- ggplot(subdf, aes(x = time, y = reward))+
+  geom_line()+
+  theme_void()
+pRewardLine 
+
+pBehavLine <- ggplot(subdf, aes(x = time, y = proximity))+
+  geom_line()+
+  theme_void()
+pBehavLine 
+
+pIllust <- cowplot::plot_grid(pRewardLine,pBehavLine, nrow = 2 )
+pIllust
+
+ggsave('plots/dynamicsIllust.pdf',pIllust, width = 2, height =.7, units = 'in')
 # ###################################################################################################
 # # Load behavioral data
 # ####################################################################################################
@@ -469,7 +589,6 @@ ggsave('plots/dynamicsSolo.pdf',pSI, width = 12, height = 3, units = 'in')
 # 
 # #Cluster analysis
 # permDF <- data.frame()
-# permNum <-10000 #number of permutations
 # n_offset <- length(unique(groupDynamicsDF$offset))
 # 
 # for (envType in c('random', 'smooth')){ #envs
