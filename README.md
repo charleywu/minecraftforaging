@@ -34,7 +34,8 @@ The main analyses reported in the paper are based on:
 * `individualDynamics.R` and `temporalDynamics.R` are used together to conduct the dynamic analyses, with intermediate outputs saved in `dynamicData`
 * `pullAnalysis.R` relies on `extract_pulls.Strandburg-Peshkin.r` with intermediate outputs saved in `sequences` and `events`
 * `illustrativeExamples.R` visualize some illustrative behavior from the task for Figure 1
-* `rewardTimes.R` are used to compute individual and socially observed reward times, which are used in the computational models. 
+* `trajectories.R` contains code used the distance between blocks and turning angle analyses
+* `rewardTimes.R` are used to compute individual and socially observed reward times, which are used in the computational models 
 * `utilities.R` contains some useful functions for saving brms models
 * `statisticalTests.R` contains code used to perform stats
 
