@@ -1,8 +1,8 @@
-# Visual-spatial dynamics drive adaptive social learning in immersive environments
+# Adaptive mechanisms of social and asocial learning in immersive collective foraging
 
 This repository contains all data and code for running the experiment, analyzing the data, and the Unity simulations for computing the visual field transcription. 
 
-Wu, C. M., Deffner, D., Kahl, B., Meder, B., Ho, M. H., & Kurvers, R. H. J. M. (2023). Visual-spatial dynamics predict adaptive social and asocial learning in immersive environments. BioRxiv. https://doi.org/10.1101/2023.06.28.546887
+Wu, C. M., Deffner, D., Kahl, B., Meder, B., Ho, M. H., & Kurvers, R. H. J. M. (2025). Adaptive mechanisms of social and asocial learning in immersive collective foraging. BioRxiv. https://doi.org/10.1101/2023.06.28.546887
 
 
 ## Software requirements
