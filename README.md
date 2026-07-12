@@ -2,8 +2,7 @@
 
 This repository contains all data and code for running the experiment, analyzing the data, and the Unity simulations for computing the visual field transcription. 
 
-Wu, C. M., Deffner, D., Kahl, B., Meder, B., Ho, M. H., & Kurvers, R. H. J. M. (2025). Adaptive mechanisms of social and asocial learning in immersive collective foraging. BioRxiv. https://doi.org/10.1101/2023.06.28.546887
-
+Wu, C. M., Deffner, D., Kahl, B., Meder, B., Ho, M. H., & Kurvers, R. H. J. M. (2025). Adaptive mechanisms of social and asocial learning in immersive collective foraging.  *Nature Communications*, 16, 3539. https://doi.org/10.1038/s41467-025-58365-6
 
 ## Software requirements
 
